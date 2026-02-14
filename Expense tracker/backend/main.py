@@ -1,12 +1,40 @@
 from fastapi import FastAPI, Depends
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 import models, schemas, crud
 from database import engine, SessionLocal, Base
 from stats_routes import router as stats_router
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="Expense Tracker API")
+app = FastAPI(
+    title="Expense Tracker API",
+    description="A comprehensive expense tracking API with chart data endpoints",
+    version="1.0.0"
+)
+
+# CORS Configuration - Allow frontend to connect
+origins = [
+    "http://localhost:3000",
+    "http://localhost:5500",
+    "http://127.0.0.1:5500",
+    "http://localhost:8080",
+    "file://",  # Allow local HTML files
+    "*"  # Allow all origins in development
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all methods (GET, POST, DELETE, etc.)
+    allow_headers=["*"],  # Allow all headers
+)
 
 # Include stats router
 app.include_router(stats_router)
@@ -22,7 +50,17 @@ def get_db():
 # Root
 @app.get("/")
 def home():
-    return {"message": "Expense Tracker API running"}
+    return {
+        "message": "Expense Tracker API running",
+        "version": "1.0.0",
+        "status": "healthy",
+        "endpoints": {
+            "expenses": "/expenses",
+            "category_summary": "/summary/category",
+            "monthly_summary": "/summary/monthly",
+            "docs": "/docs"
+        }
+    }
 
 # Add expense
 @app.post("/expenses", response_model=schemas.ExpenseResponse)
